@@ -4,14 +4,23 @@
 \alias{process_selectors}
 \alias{process_formula_selectors}
 \alias{fill_formula_selectors}
+\alias{process_selectors.data.frame}
+\alias{process_formula_selectors.data.frame}
+\alias{fill_formula_selectors.data.frame}
 \alias{compute_formula_selector}
 \alias{check_list_elements}
 \alias{cards_select}
 \title{Process tidyselectors}
 \usage{
-process_selectors(data, ..., env = caller_env())
+process_selectors(data, ...)
 
-process_formula_selectors(
+process_formula_selectors(data, ...)
+
+fill_formula_selectors(data, ...)
+
+\method{process_selectors}{data.frame}(data, ..., env = caller_env())
+
+\method{process_formula_selectors}{data.frame}(
   data,
   ...,
   env = caller_env(),
@@ -19,7 +28,7 @@ process_formula_selectors(
   allow_empty = TRUE
 )
 
-fill_formula_selectors(data, ..., env = caller_env())
+\method{fill_formula_selectors}{data.frame}(data, ..., env = caller_env())
 
 compute_formula_selector(
   data,
@@ -35,17 +44,16 @@ check_list_elements(
   x,
   predicate,
   error_msg = NULL,
-  env = rlang::caller_env(),
   arg_name = rlang::caller_arg(x)
 )
 
-cards_select(expr, data, ..., arg_name = NULL, .call = parent.frame())
+cards_select(expr, data, ..., arg_name = NULL)
 }
 \arguments{
 \item{data}{(\code{data.frame})\cr
 a data frame}
 
-\item{...}{(\code{\link[=dyn-dots]{dynamic-dots}})\cr
+\item{...}{(\code{\link[rlang:dyn-dots]{dynamic-dots}})\cr
 named arguments where the value of the argument is processed with tidyselect.
 \itemize{
 \item \code{process_selectors()}: the values are tidyselect-compatible selectors
@@ -95,9 +103,6 @@ be used in error messaging when mis-specified arguments are passed. Elements
 
 \item{expr}{(\code{expression})\cr
 Defused R code describing a selection according to the tidyselect syntax.}
-
-\item{.call}{(\code{environment})\cr
-calling environment used for error messaging.}
 }
 \value{
 \code{process_selectors()}, \code{fill_formula_selectors()}, \code{process_formula_selectors()}

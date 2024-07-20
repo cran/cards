@@ -3,29 +3,40 @@
 \name{ard_hierarchical}
 \alias{ard_hierarchical}
 \alias{ard_hierarchical_count}
+\alias{ard_hierarchical.data.frame}
+\alias{ard_hierarchical_count.data.frame}
 \title{Hierarchical ARD Statistics}
 \usage{
-ard_hierarchical(
+ard_hierarchical(data, ...)
+
+ard_hierarchical_count(data, ...)
+
+\method{ard_hierarchical}{data.frame}(
   data,
   variables,
   by = dplyr::group_vars(data),
-  statistic = everything() ~ categorical_summary_fns(),
+  statistic = everything() ~ c("n", "N", "p"),
   denominator = NULL,
   fmt_fn = NULL,
-  stat_label = everything() ~ default_stat_labels()
+  stat_label = everything() ~ default_stat_labels(),
+  id = NULL,
+  ...
 )
 
-ard_hierarchical_count(
+\method{ard_hierarchical_count}{data.frame}(
   data,
   variables,
   by = dplyr::group_vars(data),
   fmt_fn = NULL,
-  stat_label = everything() ~ default_stat_labels()
+  stat_label = everything() ~ default_stat_labels(),
+  ...
 )
 }
 \arguments{
 \item{data}{(\code{data.frame})\cr
 a data frame}
+
+\item{...}{Arguments passed to methods.}
 
 \item{variables}{(\code{\link[dplyr:dplyr_tidy_select]{tidy-select}})\cr
 variables to perform the nested/hierarchical tabulations within.}
@@ -36,9 +47,8 @@ specified here appear in results. Default is \code{dplyr::group_vars(data)}.}
 
 \item{statistic}{(\code{\link[=syntax]{formula-list-selector}})\cr
 a named list, a list of formulas,
-or a single formula where the list element is a named list of functions
-(or the RHS of a formula),
-e.g. \code{list(mpg = categorical_summary_fns())}.}
+or a single formula where the list element one or more of  \code{c("n", "N", "p")}
+(or the RHS of a formula).}
 
 \item{denominator}{(\code{data.frame}, \code{integer})\cr
 Specify this \emph{optional} argument to change the denominator,
@@ -48,13 +58,18 @@ e.g. the \code{"N"} statistic. Default is \code{NULL}. See below for details.}
 a named list, a list of formulas,
 or a single formula where the list element is a named list of functions
 (or the RHS of a formula),
-e.g. \verb{list(mpg = list(mean = \\(x) round(x, digits = 2) |> as.character))}.}
+e.g. \verb{list(mpg = list(mean = \\(x) round(x, digits = 2) |> as.character()))}.}
 
 \item{stat_label}{(\code{\link[=syntax]{formula-list-selector}})\cr
 a named list, a list of formulas, or a single formula where
 the list element is either a named list or a list of formulas defining the
 statistic labels, e.g. \code{everything() ~ list(n = "n", p = "pct")} or
 \code{everything() ~ list(n ~ "n", p ~ "pct")}.}
+
+\item{id}{((\code{\link[dplyr:dplyr_tidy_select]{tidy-select}})\cr)
+an optional argument used to assert there are no duplicates with in the
+column(s) passed here. For example, if \code{id=USUBJID} is passed, we will
+add a check there are no duplicates in \code{data['USUBJID']}.}
 }
 \value{
 an ARD data frame of class 'card'
@@ -71,6 +86,36 @@ variables, e.g. \code{variables=c(AESOC, AETERM)} summarizes \code{AETERM} neste
 in \code{AESOC}, and also summarizes the counts of \code{AESOC}.
 }
 }
+\section{Denominators}{
+
+By default, the \code{ard_categorical()} function returns the statistics \code{"n"}, \code{"N"}, and
+\code{"p"}, where little \code{"n"} are the counts for the variable levels, and big \code{"N"} is
+the number of non-missing observations. The default calculation for the
+percentage is merely \code{p = n/N}.
+
+However, it is sometimes necessary to provide a different \code{"N"} to use
+as the denominator in this calculation. For example, in a calculation
+of the rates of various observed adverse events, you may need to update the
+denominator to the number of enrolled subjects.
+
+In such cases, use the \code{denominator} argument to specify a new definition
+of \code{"N"}, and subsequently \code{"p"}.
+The argument expects one of the following inputs:
+\itemize{
+\item a data frame. Any columns in the data frame that overlap with the \code{by}/\code{strata}
+columns will be used to calculate the new \code{"N"}.
+\item an integer. This single integer will be used as the new \code{"N"}
+\item a string: one of \code{"column"}, \code{"row"}, or \code{"cell"}. \code{"column"} is equivalent
+to \code{denominator=NULL}. \code{"row"} gives 'row' percentages where \code{by}/\code{strata}
+columns are the 'top' of a cross table, and the variables are the rows.
+\code{"cell"} gives percentages where the denominator is the number of non-missing
+rows in the source data frame.
+\item a structured data frame. The data frame will include columns from \code{by}/\code{strata}.
+The last column must be named \code{"...ard_N..."}. The integers in this column will
+be used as the updated \code{"N"} in the calculations.
+}
+}
+
 \examples{
 ard_hierarchical(
   data = ADAE,

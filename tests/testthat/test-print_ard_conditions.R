@@ -52,14 +52,27 @@ test_that("print_ard_conditions() works", {
   # calling function name prints correctly
   expect_snapshot({
     tbl_summary <- function() {
+      set_cli_abort_call()
+
       ard <- ard_continuous(
         ADSL,
         variables = AGE,
         statistic = ~ list(err_fn = \(x) stop("'tis an error"))
       )
 
-      print_ard_conditions(ard, call = current_env())
+      print_ard_conditions(ard)
     }
     tbl_summary()
   })
+})
+
+test_that("print_ard_conditions() no error when 'error'/'warning' columns not present", {
+  expect_snapshot(
+    ard_continuous(
+      ADSL,
+      variables = AGE
+    ) |>
+      dplyr::select(-warning, -error) |>
+      print_ard_conditions()
+  )
 })

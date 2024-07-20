@@ -22,9 +22,8 @@
 #'   e.g. the `"N"` statistic. Default is `NULL`. See below for details.
 #' @param statistic ([`formula-list-selector`][syntax])\cr
 #'   a named list, a list of formulas,
-#'   or a single formula where the list element is a named list of functions
-#'   (or the RHS of a formula),
-#'   e.g. `list(mpg = categorical_summary_fns())`.
+#'   or a single formula where the list element one or more of  `c("n", "N", "p")`
+#'   (or the RHS of a formula).
 #' @param stat_label ([`formula-list-selector`][syntax])\cr
 #'   a named list, a list of formulas, or a single formula where
 #'   the list element is either a named list or a list of formulas defining the
@@ -58,8 +57,27 @@
 #'   The last column must be named `"...ard_N..."`. The integers in this column will
 #'   be used as the updated `"N"` in the calculations.
 #'
+#' @section Other Statistics:
+#' In some cases, you may need other kinds of statistics for categorical variables.
+#' Despite the name, `ard_continuous()` can be used to obtain these statistics.
+#'
+#' In the example below, we calculate the mode of a categorical variable.
+#'
+#' ```{r}
+#' get_mode <- function(x) {
+#'   table(x) |> sort(decreasing = TRUE) |> names() |> getElement(1L)
+#' }
+#'
+#' ADSL |>
+#'   ard_continuous(
+#'     variables = AGEGR1,
+#'     statistic = list(AGEGR1 = list(mode = get_mode))
+#'   )
+#' ```
+#'
+#'
 #' @return an ARD data frame of class 'card'
-#' @export
+#' @name ard_categorical
 #'
 #' @examples
 #' ard_categorical(ADSL, by = "ARM", variables = "AGEGR1")
@@ -68,20 +86,33 @@
 #'   dplyr::group_by(ARM) |>
 #'   ard_categorical(
 #'     variables = "AGEGR1",
-#'     statistic = everything() ~ categorical_summary_fns("n")
+#'     statistic = everything() ~ "n"
 #'   )
-ard_categorical <- function(data,
-                            variables,
-                            by = dplyr::group_vars(data),
-                            strata = NULL,
-                            statistic = everything() ~ categorical_summary_fns(),
-                            denominator = NULL,
-                            fmt_fn = NULL,
-                            stat_label = everything() ~ default_stat_labels()) {
-  # check inputs ---------------------------------------------------------------
+NULL
+
+#' @rdname ard_categorical
+#' @export
+ard_categorical <- function(data, ...) {
   check_not_missing(data)
+  UseMethod("ard_categorical")
+}
+
+#' @rdname ard_categorical
+#' @export
+ard_categorical.data.frame <- function(data,
+                                       variables,
+                                       by = dplyr::group_vars(data),
+                                       strata = NULL,
+                                       statistic = everything() ~ c("n", "p", "N"),
+                                       denominator = NULL,
+                                       fmt_fn = NULL,
+                                       stat_label = everything() ~ default_stat_labels(),
+                                       ...) {
+  set_cli_abort_call()
+  check_dots_used()
+
+  # check inputs ---------------------------------------------------------------
   check_not_missing(variables)
-  check_data_frame(x = data)
   .check_no_ard_columns(data)
 
   # process arguments ----------------------------------------------------------
@@ -95,14 +126,19 @@ ard_categorical <- function(data,
   .check_whether_na_counts(data[variables])
 
   process_formula_selectors(
-    data = data[variables],
+    data[variables],
     statistic = statistic,
     stat_label = stat_label,
     fmt_fn = fmt_fn
   )
   fill_formula_selectors(
-    data = data[variables],
-    statistic = formals(cards::ard_continuous)[["statistic"]] |> eval()
+    data[variables],
+    statistic = formals(asNamespace("cards")[["ard_categorical.data.frame"]])[["statistic"]] |> eval()
+  )
+  check_list_elements(
+    x = statistic,
+    predicate = \(x) is.character(x) && all(x %in% c("n", "p", "N")),
+    error_msg = "Elements passed in the {.arg statistic} argument must be one or more of {.val {c('n', 'p', 'N')}}"
   )
 
   # return empty tibble if no variables selected -------------------------------
@@ -110,28 +146,15 @@ ard_categorical <- function(data,
     return(dplyr::tibble())
   }
 
-  # calculating summary stats --------------------------------------------------
-  # first calculate non-tabulation statistics
-  statistics_non_tabulation <-
-    lapply(statistic, function(x) utils::modifyList(x, list(tabulation = NULL))) |>
-    compact()
-
-  if (is_empty(statistics_non_tabulation)) {
-    df_result_non_tabulation <- dplyr::tibble()
-  } else {
-    df_result_non_tabulation <-
-      ard_continuous(
-        data = data,
-        variables = all_of(variables),
-        by = all_of(by),
-        strata = all_of(strata),
-        statistic = statistics_non_tabulation,
-        fmt_fn = NULL,
-        stat_label = NULL
-      ) |>
-      dplyr::select(-c("stat_label", "fmt_fn"))
+  # return note about column names that result in errors -----------------------
+  if (any(by %in% c("variable", "variable_level"))) {
+    cli::cli_abort(
+      "The {.arg by} argument cannot include variables named {.val {c('variable', 'variable_level')}}.",
+      call = get_cli_abort_call()
+    )
   }
 
+  # calculating summary stats --------------------------------------------------
   # calculate tabulation statistics
   df_result_tabulation <-
     .calculate_tabulation_statistics(
@@ -140,13 +163,13 @@ ard_categorical <- function(data,
       by = by,
       strata = strata,
       denominator = denominator,
-      statistic = statistic
+      statistic = lapply(statistic, \(x) list(tabulation = x))
     )
 
 
   # final processing of fmt_fn -------------------------------------------------
   df_result_final <-
-    dplyr::bind_rows(df_result_tabulation, df_result_non_tabulation) |>
+    df_result_tabulation |>
     .process_nested_list_as_df(
       arg = fmt_fn,
       new_column = "fmt_fn"
@@ -196,8 +219,12 @@ ard_categorical <- function(data,
 #'   denominator = "cell",
 #'   statistic = list(ARM = list(tabulation = c("N")))
 #' )
-#' @noRd
-.calculate_tabulation_statistics <- function(data, variables, by, strata, denominator, statistic, call = parent.frame()) {
+.calculate_tabulation_statistics <- function(data,
+                                             variables,
+                                             by,
+                                             strata,
+                                             denominator,
+                                             statistic) {
   # extract the "tabulation" statistics.
   statistics_tabulation <-
     lapply(statistic, function(x) x["tabulation"] |> compact()) |> compact()
@@ -225,8 +252,7 @@ ard_categorical <- function(data,
           names(),
       denominator = denominator,
       by = by,
-      strata = strata,
-      call = call
+      strata = strata
     )
 
   # perform other counts
@@ -259,7 +285,7 @@ ard_categorical <- function(data,
         }
 
         df_result_tabulation |>
-          .rename_ard_columns(variable = variable, by = by, strata = strata) |>
+          .nesting_rename_ard_columns(variable = variable, by = by, strata = strata) |>
           dplyr::mutate(
             across(any_of(c("...ard_n...", "...ard_N...", "...ard_p...")), as.list),
             across(c(matches("^group[0-9]+_level$"), any_of("variable_level")), as.list)
@@ -286,7 +312,7 @@ ard_categorical <- function(data,
     )
 }
 
-.check_whether_na_counts <- function(data, call = parent.frame()) {
+.check_whether_na_counts <- function(data) {
   walk(
     names(data),
     function(x) {
@@ -295,7 +321,7 @@ ard_categorical <- function(data,
           c("Column {.val {x}} is all missing and cannot by tabulated.",
             i = "Only columns of class {.cls logical} and {.cls factor} can be tabulated when all values are missing."
           ),
-          call = call
+          call = get_cli_abort_call()
         )
       }
     }
@@ -326,7 +352,6 @@ ard_categorical <- function(data,
 #'
 #' @examples
 #' cards:::.table_as_df(ADSL, variable = "ARM", by = "AGEGR1", strata = NULL)
-#' @noRd
 .table_as_df <- function(data, variable = NULL, by = NULL, strata = NULL,
                          useNA = c("no", "always"), count_column = "...ard_n...") {
   useNA <- match.arg(useNA)
@@ -363,10 +388,18 @@ ard_categorical <- function(data,
 
   # if strata is present, remove unobserved rows
   if (!is_empty(strata)) {
+    # if we were not able to maintain the original type, convert strata to character
+    if (!isTRUE(all_cols_equal)) {
+      df_original_strata <- dplyr::distinct(data[strata]) |>
+        apply(MARGIN = 2, FUN = as.character)
+    } else {
+      df_original_strata <- dplyr::distinct(data[strata])
+    }
+
     df_table <-
-      dplyr::left_join(
-        dplyr::distinct(data[strata]),
+      dplyr::right_join(
         df_table,
+        df_original_strata,
         by = strata
       )
   }
@@ -382,16 +415,13 @@ ard_categorical <- function(data,
 #' denominator in percentage calculations.
 #'
 #' @inheritParams ard_categorical
-#' @param call (`environment`)\cr
-#'   frame for error messaging. Default is [parent.frame()].
 #'
 #' @return a data frame
 #' @keywords internal
 #'
 #' @examples
 #' cards:::.process_denominator(mtcars, denominator = 1000, variables = "cyl", by = "gear")
-#' @noRd
-.process_denominator <- function(data, variables, denominator, by, strata, call = parent.frame()) {
+.process_denominator <- function(data, variables, denominator, by, strata) {
   if (is_empty(variables)) {
     return(list())
   }
@@ -441,7 +471,7 @@ ard_categorical <- function(data,
   else if (is.data.frame(denominator) && !"...ard_N..." %in% names(denominator)) {
     .check_for_missing_combos_in_denom(
       data,
-      denominator = denominator, by = by, strata = strata, call = call
+      denominator = denominator, by = by, strata = strata
     )
 
     lst_denominator <-
@@ -515,11 +545,11 @@ ard_categorical <- function(data,
         "Specified counts in column {.val '...ard_N...'} are not unique in",
         "the {.arg denominator} argument across the {.arg by} and {.arg strata} columns."
       ) |>
-        cli::cli_abort(call = call)
+        cli::cli_abort(call = get_cli_abort_call())
     }
     .check_for_missing_combos_in_denom(
       data,
-      denominator = denominator, by = by, strata = strata, call = call
+      denominator = denominator, by = by, strata = strata
     )
 
     # making the by/strata columns character to merge them with the count data frames
@@ -532,7 +562,7 @@ ard_categorical <- function(data,
     lst_denominator <-
       rep_named(variables, list(df_denom))
   } else {
-    cli::cli_abort("The {.arg denominator} argument has been mis-specified.", call = call)
+    cli::cli_abort("The {.arg denominator} argument has been mis-specified.", call = get_cli_abort_call())
   }
 
   lst_denominator
@@ -554,16 +584,13 @@ ard_categorical <- function(data,
 #'   character vector of by column names
 #' @param strata (`character`)\cr
 #'   character vector of strata column names
-#' @param call (`environment`)\cr
-#'   frame for error messaging. Default is [parent.frame()].
 #'
 #' @return returns invisible if check is successful, throws an error message if not.
 #' @keywords internal
 #'
 #' @examples
 #' cards:::.check_for_missing_combos_in_denom(ADSL, denominator = "col", by = "ARM", strata = "AGEGR1")
-#' @noRd
-.check_for_missing_combos_in_denom <- function(data, denominator, by, strata, call = parent.frame()) {
+.check_for_missing_combos_in_denom <- function(data, denominator, by, strata) {
   by_vars_to_check <-
     c(by, strata) |>
     intersect(names(data)) |>
@@ -597,6 +624,6 @@ ard_categorical <- function(data,
       "The following {.arg by/strata} combinations are missing from the",
       "{.arg denominator} data frame: {.val {missing_combos}}."
     ) |>
-      cli::cli_abort(call = call)
+      cli::cli_abort(call = get_cli_abort_call())
   }
 }

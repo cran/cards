@@ -8,7 +8,9 @@
 #'
 #' Messages are neither saved nor printed to the console.
 #'
-#' Evaluation is done via [eval_tidy()].
+#' Evaluation is done via [`rlang::eval_tidy()`]. If errors and warnings are produced
+#' using the `{cli}` package, the messages are processed with `cli::ansi_strip()`
+#' to remove styling from the message.
 #'
 #' @inheritParams rlang::eval_tidy
 #' @return a named list
@@ -50,16 +52,14 @@ eval_capture_conditions <- function(expr, data = NULL, env = caller_env()) {
           suppressMessages(eval_tidy({{ expr }}, data = data, env = env))
       },
       warning = function(w) {
-        # TODO: update this `<<-`: I don't think CRAN likes the super assignment
         lst_result[["warning"]] <<-
           # using `c()` to capture all warnings
-          c(lst_result[["warning"]], conditionMessage(w))
+          c(lst_result[["warning"]], conditionMessage(w) |> cli::ansi_strip())
         invokeRestart("muffleWarning")
       }
     ),
     error = function(e) {
-      # TODO: update this `<<-`: I don't think CRAN likes the super assignment
-      lst_result[["error"]] <<- conditionMessage(e)
+      lst_result[["error"]] <<- conditionMessage(e) |> cli::ansi_strip()
     }
   )
 

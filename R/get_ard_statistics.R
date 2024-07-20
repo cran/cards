@@ -4,7 +4,7 @@
 #'
 #' @param x (`data.frame`)\cr
 #'   an ARD data frame of class 'card'
-#' @param ... ([`dynamic-dots`][dyn-dots])\cr
+#' @param ... ([`dynamic-dots`][rlang::dyn-dots])\cr
 #'   optional arguments indicating rows to subset of the ARD.
 #'   For example, to return only rows where the column `"AGEGR1"` is `"65-80"`,
 #'   pass `AGEGR1 %in% "65-80"`.
@@ -32,6 +32,8 @@ get_ard_statistics <- function(x,
                                ...,
                                .column = "stat",
                                .attributes = NULL) {
+  set_cli_abort_call()
+
   # subset the ARD
   ard_subset <- dplyr::filter(x, ...)
 
@@ -67,7 +69,6 @@ get_ard_statistics <- function(x,
 #' ard <- ard_categorical(ADSL, by = "ARM", variables = "AGEGR1")
 #'
 #' cards:::.create_list_for_attributes(ard, c("group1", "group1_level"), 1)
-#' @noRd
 .create_list_for_attributes <- function(ard_subset, attributes, i) {
   ret <- list()
   for (attr in seq_along(attributes)) {

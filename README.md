@@ -1,10 +1,12 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# cards <a href="https://insightsengineering.github.io/cards/"><img src="man/figures/logo.png" align="right" height="138" alt="cards website" /></a>
+# cards <a href="https://insightsengineering.github.io/cards/"><img src="man/figures/logo.png" align="right" height="120" alt="cards website" /></a>
 
 <!-- badges: start -->
 
+[![CRAN
+status](https://www.r-pkg.org/badges/version/cards)](https://CRAN.R-project.org/package=cards)
 [![R-CMD-check](https://github.com/insightsengineering/cards/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/insightsengineering/cards/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/insightsengineering/cards/branch/main/graph/badge.svg)](https://app.codecov.io/gh/insightsengineering/cards?branch=main)
@@ -13,7 +15,7 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 <!-- badges: end -->
 
 The [CDISC Analysis Results
-Standard](https://www.cdisc.org/standards/foundational/analysis-results-standards)
+Standard](https://www.cdisc.org/standards/foundational/analysis-results-standard)
 aims to facilitate automation, reproducibility, reusability, and
 traceability of analysis results data (ARD). The {cards} package creates
 these **C**DISC **A**nalysis **R**esult **D**ata **S**ets.
@@ -69,6 +71,6 @@ models, and more.
 ## Getting Started
 
 Review the [Getting
-Started](https://insightsengineering.github.io/cards/main/articles/getting-started.html)
+Started](https://insightsengineering.github.io/cards//main/articles/getting-started.html)
 page for examples using ARDs to calculate statistics to later include in
 tables.

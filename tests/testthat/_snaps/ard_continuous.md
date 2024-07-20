@@ -60,8 +60,8 @@
     Code
       ard_continuous(letters, variables = "mpg")
     Condition
-      Error in `ard_continuous()`:
-      ! The `data` argument must be class <data.frame>, not a character vector.
+      Error in `UseMethod()`:
+      ! no applicable method for 'ard_continuous' applied to an object of class "character"
 
 ---
 
@@ -103,11 +103,11 @@
           p75 = "75th %ile"))), stat_name %in% c("p25", "p75")), variable, stat_name,
       stat_label))
     Output
-        variable stat_name      stat_label
-      1      AGE       p25       25th %ile
-      2      AGE       p75       75th %ile
-      3    BMIBL       p25 25th Percentile
-      4    BMIBL       p75 75th Percentile
+        variable stat_name stat_label
+      1      AGE       p25  25th %ile
+      2      AGE       p75  75th %ile
+      3    BMIBL       p25         Q1
+      4    BMIBL       p75         Q3
 
 ---
 
@@ -131,4 +131,18 @@
       3 DISONSDT continuo…        sd         SD   878.558      1
     Message
       i 2 more variables: warning, error
+
+# ard_continuous() works with non-syntactic names
+
+    Code
+      as.data.frame(ard_continuous(dplyr::mutate(ADSL, `BMI base` = BMIBL, Age = AGE,
+        `Arm Var` = ARM), variables = c("BMI base", Age), statistic = ~ list(
+        `mean lbl` = `mean error`), stat_label = everything() ~ list(`mean lbl` = "Test lbl")))
+    Output
+        variable    context stat_name stat_label stat                     fmt_fn
+      1 BMI base continuous  mean lbl   Test lbl NULL .Primitive("as.character")
+      2      Age continuous  mean lbl   Test lbl NULL .Primitive("as.character")
+        warning                                    error
+      1    NULL There was an error calculating the mean.
+      2    NULL There was an error calculating the mean.
 

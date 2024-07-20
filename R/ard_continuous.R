@@ -33,15 +33,16 @@
 #'   a named list, a list of formulas,
 #'   or a single formula where the list element is a named list of functions
 #'   (or the RHS of a formula),
-#'   e.g. `list(mpg = list(mean = \(x) round(x, digits = 2) |> as.character))`.
+#'   e.g. `list(mpg = list(mean = \(x) round(x, digits = 2) |> as.character()))`.
 #' @param stat_label ([`formula-list-selector`][syntax])\cr
 #'   a named list, a list of formulas, or a single formula where
 #'   the list element is either a named list or a list of formulas defining the
 #'   statistic labels, e.g. `everything() ~ list(mean = "Mean", sd = "SD")` or
 #'   `everything() ~ list(mean ~ "Mean", sd ~ "SD")`.
+#' @inheritParams rlang::args_dots_used
 #'
 #' @return an ARD data frame of class 'card'
-#' @export
+#' @name ard_continuous
 #'
 #' @examples
 #' ard_continuous(ADSL, by = "ARM", variables = "AGE")
@@ -57,17 +58,30 @@
 #'         as.list() |>
 #'         setNames(c("conf.low", "conf.high")))
 #'   )
-ard_continuous <- function(data,
-                           variables,
-                           by = dplyr::group_vars(data),
-                           strata = NULL,
-                           statistic = everything() ~ continuous_summary_fns(),
-                           fmt_fn = NULL,
-                           stat_label = everything() ~ default_stat_labels()) {
-  # check inputs ---------------------------------------------------------------
+NULL
+
+#' @rdname ard_continuous
+#' @export
+ard_continuous <- function(data, ...) {
   check_not_missing(data)
+  UseMethod("ard_continuous")
+}
+
+#' @rdname ard_continuous
+#' @export
+ard_continuous.data.frame <- function(data,
+                                      variables,
+                                      by = dplyr::group_vars(data),
+                                      strata = NULL,
+                                      statistic = everything() ~ continuous_summary_fns(),
+                                      fmt_fn = NULL,
+                                      stat_label = everything() ~ default_stat_labels(),
+                                      ...) {
+  set_cli_abort_call()
+  check_dots_used()
+
+  # check inputs ---------------------------------------------------------------
   check_not_missing(variables)
-  check_data_frame(x = data)
   .check_no_ard_columns(data)
 
   # process arguments ----------------------------------------------------------
@@ -79,15 +93,15 @@ ard_continuous <- function(data,
   data <- dplyr::ungroup(data)
 
   process_formula_selectors(
-    data = data[variables],
+    data[variables],
     statistic = statistic,
     fmt_fn = fmt_fn,
     stat_label = stat_label
   )
   fill_formula_selectors(
-    data = data[variables],
-    statistic = formals(cards::ard_continuous)[["statistic"]] |> eval(),
-    stat_label = formals(cards::ard_continuous)[["stat_label"]] |> eval()
+    data[variables],
+    statistic = formals(asNamespace("cards")[["ard_continuous.data.frame"]])[["stat_label"]] |> eval(),
+    stat_label = formals(asNamespace("cards")[["ard_continuous.data.frame"]])[["stat_label"]] |> eval()
   )
 
   check_list_elements(
@@ -166,8 +180,6 @@ ard_continuous <- function(data,
 #'
 #' @param x (`data.frame`)\cr
 #'   a data frame
-#' @param call (`environment`)\cr
-#'   frame for error messaging. Default is [parent.frame()].
 #' @param exceptions (`string`)\cr
 #'   character string of column names to exclude from checks
 #'
@@ -178,8 +190,7 @@ ard_continuous <- function(data,
 #' data <- data.frame("ard_x" = 1)
 #'
 #' cards:::.check_no_ard_columns(data)
-#' @noRd
-.check_no_ard_columns <- function(x, call = parent.frame(), exceptions = "...ard_dummy_for_counting...") {
+.check_no_ard_columns <- function(x, exceptions = "...ard_dummy_for_counting...") {
   colnames <- names(x)
   ard_colnames <-
     colnames[startsWith(colnames, "...ard_") & endsWith(colnames, "...")] |>
@@ -187,7 +198,7 @@ ard_continuous <- function(data,
 
   if (!is_empty(ard_colnames)) {
     "Columns beginning with {.val '...ard_'} and ending with {.val '...'} are not allowed." |>
-      cli::cli_abort(call = call)
+      cli::cli_abort(call = get_cli_abort_call())
   }
 }
 
@@ -221,7 +232,6 @@ ard_continuous <- function(data,
 #'   strata = NULL,
 #'   data = ADSL
 #' )
-#' @noRd
 .calculate_stats_as_ard <- function(df_nested, variables, statistic,
                                     by, strata, data,
                                     new_col_name = "...ard_all_stats...") {
@@ -283,7 +293,6 @@ ard_continuous <- function(data,
 #' })
 #'
 #' cards:::.lst_results_as_df(msgs, "result", "mean")
-#' @noRd
 .lst_results_as_df <- function(x, variable, fun_name) {
   # unnesting results if needed
   if (.is_named_list(x$result, allow_df = TRUE)) {
@@ -331,7 +340,6 @@ ard_continuous <- function(data,
 #' ard <- ard_categorical(ADSL, by = "ARM", variables = "AGEGR1")
 #'
 #' cards:::.process_nested_list_as_df(ard, NULL, "new_col")
-#' @noRd
 .process_nested_list_as_df <- function(x, arg, new_column, unlist = FALSE) {
   # add fmt_fn column if not already present
   if (!new_column %in% names(x)) {
@@ -356,9 +364,9 @@ ard_continuous <- function(data,
           ) %>%
             # styler: off
             {dplyr::tibble(
-                variable = variable,
-                stat_name = names(.),
-                "{new_column}" := unname(.)
+              variable = variable,
+              stat_name = names(.),
+              "{new_column}" := unname(.)
             )}
           # styler: on
         }
@@ -388,7 +396,6 @@ ard_continuous <- function(data,
 #'   dplyr::mutate(fmt_fn = NA)
 #'
 #' cards:::.default_fmt_fn(ard)
-#' @noRd
 .default_fmt_fn <- function(x) {
   x |>
     dplyr::mutate(

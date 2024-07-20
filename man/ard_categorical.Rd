@@ -2,22 +2,28 @@
 % Please edit documentation in R/ard_categorical.R
 \name{ard_categorical}
 \alias{ard_categorical}
+\alias{ard_categorical.data.frame}
 \title{Categorical ARD Statistics}
 \usage{
-ard_categorical(
+ard_categorical(data, ...)
+
+\method{ard_categorical}{data.frame}(
   data,
   variables,
   by = dplyr::group_vars(data),
   strata = NULL,
-  statistic = everything() ~ categorical_summary_fns(),
+  statistic = everything() ~ c("n", "p", "N"),
   denominator = NULL,
   fmt_fn = NULL,
-  stat_label = everything() ~ default_stat_labels()
+  stat_label = everything() ~ default_stat_labels(),
+  ...
 )
 }
 \arguments{
 \item{data}{(\code{data.frame})\cr
 a data frame}
+
+\item{...}{Arguments passed to methods.}
 
 \item{variables}{(\code{\link[dplyr:dplyr_tidy_select]{tidy-select}})\cr
 columns to include in summaries. Default is \code{everything()}.}
@@ -36,9 +42,8 @@ Arguments may be used in conjunction with one another.}
 
 \item{statistic}{(\code{\link[=syntax]{formula-list-selector}})\cr
 a named list, a list of formulas,
-or a single formula where the list element is a named list of functions
-(or the RHS of a formula),
-e.g. \code{list(mpg = categorical_summary_fns())}.}
+or a single formula where the list element one or more of  \code{c("n", "N", "p")}
+(or the RHS of a formula).}
 
 \item{denominator}{(\code{data.frame}, \code{integer})\cr
 Specify this \emph{optional} argument to change the denominator,
@@ -48,7 +53,7 @@ e.g. the \code{"N"} statistic. Default is \code{NULL}. See below for details.}
 a named list, a list of formulas,
 or a single formula where the list element is a named list of functions
 (or the RHS of a formula),
-e.g. \verb{list(mpg = list(mean = \\(x) round(x, digits = 2) |> as.character))}.}
+e.g. \verb{list(mpg = list(mean = \\(x) round(x, digits = 2) |> as.character()))}.}
 
 \item{stat_label}{(\code{\link[=syntax]{formula-list-selector}})\cr
 a named list, a list of formulas, or a single formula where
@@ -92,6 +97,29 @@ be used as the updated \code{"N"} in the calculations.
 }
 }
 
+\section{Other Statistics}{
+
+In some cases, you may need other kinds of statistics for categorical variables.
+Despite the name, \code{ard_continuous()} can be used to obtain these statistics.
+
+In the example below, we calculate the mode of a categorical variable.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{get_mode <- function(x) \{
+  table(x) |> sort(decreasing = TRUE) |> names() |> getElement(1L)
+\}
+
+ADSL |>
+  ard_continuous(
+    variables = AGEGR1,
+    statistic = list(AGEGR1 = list(mode = get_mode))
+  )
+#> \{cards\} data frame: 1 x 8
+#>   variable   context stat_name stat_label  stat fmt_fn
+#> 1   AGEGR1 continuo…      mode       mode 65-80   <fn>
+#> i 2 more variables: warning, error
+}\if{html}{\out{</div>}}
+}
+
 \examples{
 ard_categorical(ADSL, by = "ARM", variables = "AGEGR1")
 
@@ -99,6 +127,6 @@ ADSL |>
   dplyr::group_by(ARM) |>
   ard_categorical(
     variables = "AGEGR1",
-    statistic = everything() ~ categorical_summary_fns("n")
+    statistic = everything() ~ "n"
   )
 }

@@ -6,11 +6,12 @@
 \usage{
 ard_stack(
   data,
-  by = NULL,
   ...,
+  .by = NULL,
   .overall = FALSE,
   .missing = FALSE,
   .attributes = FALSE,
+  .total_n = FALSE,
   .shuffle = FALSE
 )
 }
@@ -18,11 +19,11 @@ ard_stack(
 \item{data}{(\code{data.frame})\cr
 a data frame}
 
-\item{by}{(\code{\link[dplyr:dplyr_tidy_select]{tidy-select}})\cr
-columns to tabulate by in the series of ARD function calls}
-
-\item{...}{(\code{\link[=dyn-dots]{dynamic-dots}})\cr
+\item{...}{(\code{\link[rlang:dyn-dots]{dynamic-dots}})\cr
 Series of ARD function calls to be run and stacked}
+
+\item{.by}{(\code{\link[dplyr:dplyr_tidy_select]{tidy-select}})\cr
+columns to tabulate by in the series of ARD function calls}
 
 \item{.overall}{(\code{logical})\cr logical indicating whether overall statistics
 should be calculated (i.e. re-run all \verb{ard_*()} calls with \code{by=NULL}).
@@ -36,6 +37,9 @@ variables represented in the ARD. Default is \code{FALSE}.}
 logical indicating whether to include the results of \code{ard_attributes()} for all
 variables represented in the ARD. Default is \code{FALSE}.}
 
+\item{.total_n}{(\code{logical})\cr
+logical indicating whether to include of \code{ard_total_n()} in the returned ARD.}
+
 \item{.shuffle}{(\code{logical})\cr
 logical indicating whether to perform \code{shuffle_ard()} on the final result.
 Default is \code{FALSE}.}
@@ -45,23 +49,28 @@ a transformed ARD data frame (of class 'card' if \code{.shuffle = FALSE})
 }
 \description{
 Stack multiple ARD calls sharing common input \code{data} and \code{by} variables.
-Optionally incorporate additional information on represented variables (i.e.
-big N's, missingness, attributes) and/or tidy for use in displays with
-\code{shuffle_ard()}.
+Optionally incorporate additional information on represented variables, e.g.
+overall calculations, rates of missingness, attributes, or transform results
+with \code{shuffle_ard()}.
+
+If the \code{ard_stack(by)} argument is specified, a univariate tabulation of the
+by variable will also be returned.
 }
 \examples{
 ard_stack(
   data = ADSL,
-  by = "ARM",
   ard_categorical(variables = "AGEGR1"),
-  ard_continuous(variables = "AGE")
+  ard_continuous(variables = "AGE"),
+  .by = "ARM",
+  .overall = TRUE,
+  .attributes = TRUE
 )
 
 ard_stack(
   data = ADSL,
-  by = "ARM",
   ard_categorical(variables = "AGEGR1"),
   ard_continuous(variables = "AGE"),
+  .by = "ARM",
   .shuffle = TRUE
 )
 

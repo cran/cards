@@ -2,21 +2,27 @@
 % Please edit documentation in R/ard_complex.R
 \name{ard_complex}
 \alias{ard_complex}
+\alias{ard_complex.data.frame}
 \title{Complex ARD Summaries}
 \usage{
-ard_complex(
+ard_complex(data, ...)
+
+\method{ard_complex}{data.frame}(
   data,
   variables,
   by = dplyr::group_vars(data),
   strata = NULL,
   statistic,
   fmt_fn = NULL,
-  stat_label = everything() ~ default_stat_labels()
+  stat_label = everything() ~ default_stat_labels(),
+  ...
 )
 }
 \arguments{
 \item{data}{(\code{data.frame})\cr
 a data frame}
+
+\item{...}{Arguments passed to methods.}
 
 \item{variables}{(\code{\link[dplyr:dplyr_tidy_select]{tidy-select}})\cr
 columns to include in summaries. Default is \code{everything()}.}
@@ -40,7 +46,7 @@ argument, except the summary function \emph{must} accept the following arguments
 \item \code{x}: a vector
 \item \code{data}: the data frame that has been subset such that the \code{by}/\code{strata} columns
 and rows in which \code{"variable"} is \code{NA} have been removed.
-\item \code{data_full}: the full data frame
+\item \code{full_data}: the full data frame
 \item \code{by}: character vector of the \code{by} variables
 \item \code{strata}: character vector of the \code{strata} variables
 It is unlikely any one function will need \emph{all} of the above elements,
@@ -55,7 +61,7 @@ may look like: \code{foo(x, data, ...)}
 a named list, a list of formulas,
 or a single formula where the list element is a named list of functions
 (or the RHS of a formula),
-e.g. \verb{list(mpg = list(mean = \\(x) round(x, digits = 2) |> as.character))}.}
+e.g. \verb{list(mpg = list(mean = \\(x) round(x, digits = 2) |> as.character()))}.}
 
 \item{stat_label}{(\code{\link[=syntax]{formula-list-selector}})\cr
 a named list, a list of formulas, or a single formula where
@@ -82,10 +88,10 @@ ard_complex(
 )
 
 # return the grand mean and the mean within the `by` group
-grand_mean <- function(data, data_full, variable, ...) {
+grand_mean <- function(data, full_data, variable, ...) {
   list(
     mean = mean(data[[variable]], na.rm = TRUE),
-    grand_mean = mean(data_full[[variable]], na.rm = TRUE)
+    grand_mean = mean(full_data[[variable]], na.rm = TRUE)
   )
 }
 

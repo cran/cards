@@ -28,7 +28,7 @@
 #'
 #' @param data (`data.frame`)\cr
 #'   a data frame
-#' @param ... ([`dynamic-dots`][dyn-dots])\cr
+#' @param ... ([`dynamic-dots`][rlang::dyn-dots])\cr
 #'   named arguments where the value of the argument is processed with tidyselect.
 #'   - `process_selectors()`: the values are tidyselect-compatible selectors
 #'   - `process_formula_selectors()`: the values are named lists, list of formulas
@@ -64,8 +64,6 @@
 #' @param allow_empty (`logical`)\cr
 #'   Logical indicating whether empty result is acceptable while process
 #'   formula-list selectors. Default is `TRUE`.
-#' @param .call (`environment`)\cr
-#'   calling environment used for error messaging.
 #' @param expr (`expression`)\cr
 #'   Defused R code describing a selection according to the tidyselect syntax.
 #'
@@ -104,7 +102,27 @@ NULL
 
 #' @name process_selectors
 #' @export
-process_selectors <- function(data, ..., env = caller_env()) {
+process_selectors <- function(data, ...) {
+  UseMethod("process_selectors")
+}
+
+#' @name process_selectors
+#' @export
+process_formula_selectors <- function(data, ...) {
+  UseMethod("process_formula_selectors")
+}
+
+#' @name process_selectors
+#' @export
+fill_formula_selectors <- function(data, ...) {
+  UseMethod("fill_formula_selectors")
+}
+
+#' @name process_selectors
+#' @export
+process_selectors.data.frame <- function(data, ..., env = caller_env()) {
+  set_cli_abort_call()
+
   # saved dots as named list of quos
   dots <- enquos(...)
 
@@ -118,8 +136,7 @@ process_selectors <- function(data, ..., env = caller_env()) {
             expr = x,
             data = data,
             allow_rename = FALSE,
-            arg_name = arg_name,
-            .call = env
+            arg_name = arg_name
           )
       }
     )
@@ -133,8 +150,10 @@ process_selectors <- function(data, ..., env = caller_env()) {
 
 #' @name process_selectors
 #' @export
-process_formula_selectors <- function(data, ..., env = caller_env(),
-                                      include_env = FALSE, allow_empty = TRUE) {
+process_formula_selectors.data.frame <- function(data, ..., env = caller_env(),
+                                                 include_env = FALSE, allow_empty = TRUE) {
+  set_cli_abort_call()
+
   # saved dots as named list
   dots <- dots_list(...)
 
@@ -158,7 +177,9 @@ process_formula_selectors <- function(data, ..., env = caller_env(),
 
 #' @name process_selectors
 #' @export
-fill_formula_selectors <- function(data, ..., env = caller_env()) {
+fill_formula_selectors.data.frame <- function(data, ..., env = caller_env()) {
+  set_cli_abort_call()
+
   dots <- dots_list(...)
   ret <- rep_named(names(dots), list(NULL))
   data_names <- names(data)
@@ -188,11 +209,16 @@ fill_formula_selectors <- function(data, ..., env = caller_env()) {
 #' @export
 compute_formula_selector <- function(data, x, arg_name = caller_arg(x), env = caller_env(),
                                      strict = TRUE, include_env = FALSE, allow_empty = TRUE) {
+  set_cli_abort_call()
+
   # check inputs ---------------------------------------------------------------
   check_formula_list_selector(x, arg_name = arg_name, allow_empty = allow_empty, call = env)
 
   # user passed a named list, return unaltered
   if (.is_named_list(x)) {
+    # remove duplicates (keeping the last one)
+    x <- x[names(x) |> rev() |> Negate(duplicated)() |> rev()] # styler: off
+
     return(x[intersect(names(x), names(data))])
   }
 
@@ -202,33 +228,27 @@ compute_formula_selector <- function(data, x, arg_name = caller_arg(x), env = ca
   for (i in seq_along(x)) {
     # if element is a formula, convert to a named list
     if (inherits(x[[i]], "formula")) {
-      lhs_expr <- f_lhs(x[[i]])
+      lhs_quo <- f_lhs_as_quo(x[[i]])
 
       if (!is.null(data)) {
-        lhs_expr <- cards_select(
+        lhs_quo <- cards_select(
           # if nothing found on LHS of formula, using `everything()`
-          expr = f_lhs(x[[i]]) %||% dplyr::everything(),
+          expr = lhs_quo %||% dplyr::everything(),
           data = data,
           strict = strict,
           allow_rename = FALSE,
-          arg_name = arg_name,
-          .call = env
+          arg_name = arg_name
         )
       }
 
-      colnames <-
-        eval(
-          lhs_expr,
-          envir = attr(x[[i]], ".Environment")
-        )
+      colnames <- eval_tidy(lhs_quo)
       x[i] <-
         rep_len(
           list(
-            eval_tidy(f_rhs(x[[i]]), env = attr(x[[i]], ".Environment")) |>
+            eval_tidy(f_rhs_as_quo(x[[i]])) |>
               structure(
-                .Environment = switch(isTRUE(include_env),
-                  attr(x[[i]], ".Environment")
-                )
+                .Environment =
+                  switch(isTRUE(include_env), attr(x[[i]], ".Environment")) # styler: off
               )
           ),
           length.out = length(colnames)
@@ -253,8 +273,9 @@ compute_formula_selector <- function(data, x, arg_name = caller_arg(x), env = ca
 check_list_elements <- function(x,
                                 predicate,
                                 error_msg = NULL,
-                                env = rlang::caller_env(),
                                 arg_name = rlang::caller_arg(x)) {
+  set_cli_abort_call()
+
   imap(
     x,
     function(lst_element, variable) {
@@ -262,7 +283,7 @@ check_list_elements <- function(x,
         msg <-
           error_msg %||%
           "The value for argument {.arg {arg_name}} and variable {.val {variable}} is not the expected type."
-        cli::cli_abort(message = msg, call = env)
+        cli::cli_abort(message = msg, call = get_cli_abort_call())
       }
     }
   )
@@ -273,22 +294,46 @@ check_list_elements <- function(x,
 #' @name process_selectors
 #' @export
 cards_select <- function(expr, data, ...,
-                         arg_name = NULL,
-                         .call = parent.frame()) {
+                         arg_name = NULL) {
+  set_cli_abort_call()
+  enexpr <- enexpr(expr) # this can be removed when `vars()` check removed
+
   tryCatch(
     tidyselect::eval_select(expr = expr, data = data, ...) |> names(),
     error = function(e) {
-      cli::cli_abort(
-        message =
-          c(
-            "!" = switch(!is.null(arg_name),
-              "Error processing {.arg {arg_name}} argument."
-            ),
-            "!" = cli::ansi_strip(conditionMessage(e)),
-            i = "Select among columns {.val {names(data)}}"
+      # This check for `vars()` usage can be removed after Jan 1, 2025
+      if (tryCatch(identical(eval(as.list(enexpr)[[1]]), dplyr::vars), error = \(x) FALSE)) {
+        cli::cli_abort(
+          c("Use of {.fun dplyr::vars} in selecting environments is deprecated.",
+            i = "Use {.fun c} instead. See {.help dplyr::dplyr_tidy_select} for details."
           ),
-        call = .call
+          call = get_cli_abort_call(),
+          class = "deprecated"
+        )
+      }
+      cli::cli_abort(
+        message = c(
+          switch(!is.null(arg_name),
+            "Error processing {.arg {arg_name}} argument."
+          ),
+          "!" = cli::ansi_strip(conditionMessage(e)),
+          i = "Select among columns {.val {names(data)}}"
+        ),
+        call = get_cli_abort_call()
       )
     }
   )
+}
+
+
+# These functions are like rlang::f_lhs(), but they extract the expression
+# as a quosure with the env from the formula.
+f_lhs_as_quo <- function(f) {
+  if (is.null(f_lhs(f))) return(NULL) # styler: off
+  quo(!!f_lhs(f)) |> structure(.Environment = attr(f, ".Environment"))
+}
+
+f_rhs_as_quo <- function(f) {
+  if (is.null(f_rhs(f))) return(NULL) # styler: off
+  quo(!!f_rhs(f)) |> structure(.Environment = attr(f, ".Environment"))
 }

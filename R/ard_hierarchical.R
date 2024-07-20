@@ -14,10 +14,16 @@
 #' @param by ([`tidy-select`][dplyr::dplyr_tidy_select])\cr
 #'   variables to perform tabulations by. All combinations of the variables
 #'   specified here appear in results. Default is `dplyr::group_vars(data)`.
+#' @param id (([`tidy-select`][dplyr::dplyr_tidy_select])\cr)
+#'   an optional argument used to assert there are no duplicates with in the
+#'   column(s) passed here. For example, if `id=USUBJID` is passed, we will
+#'   add a check there are no duplicates in `data['USUBJID']`.
 #' @inheritParams ard_categorical
 #'
 #' @return an ARD data frame of class 'card'
 #' @name ard_hierarchical
+#'
+#' @inheritSection ard_categorical Denominators
 #'
 #' @examples
 #' ard_hierarchical(
@@ -36,24 +42,49 @@ NULL
 
 #' @rdname ard_hierarchical
 #' @export
-ard_hierarchical <- function(data,
-                             variables,
-                             by = dplyr::group_vars(data),
-                             statistic = everything() ~ categorical_summary_fns(),
-                             denominator = NULL, fmt_fn = NULL,
-                             stat_label = everything() ~ default_stat_labels()) {
-  # check inputs ---------------------------------------------------------------
+ard_hierarchical <- function(data, ...) {
   check_not_missing(data)
+  UseMethod("ard_hierarchical")
+}
+
+#' @rdname ard_hierarchical
+#' @export
+ard_hierarchical_count <- function(data, ...) {
+  check_not_missing(data)
+  UseMethod("ard_hierarchical_count")
+}
+
+#' @rdname ard_hierarchical
+#' @export
+ard_hierarchical.data.frame <- function(data,
+                                        variables,
+                                        by = dplyr::group_vars(data),
+                                        statistic = everything() ~ c("n", "N", "p"),
+                                        denominator = NULL, fmt_fn = NULL,
+                                        stat_label = everything() ~ default_stat_labels(),
+                                        id = NULL,
+                                        ...) {
+  set_cli_abort_call()
+  check_dots_used()
+
+  # check inputs ---------------------------------------------------------------
   check_not_missing(variables)
-  check_data_frame(x = data)
 
   # process arguments ----------------------------------------------------------
   process_selectors(
     data,
     variables = {{ variables }},
-    by = {{ by }}
+    by = {{ by }},
+    id = {{ id }}
   )
   data <- dplyr::ungroup(data)
+
+  if (!is_empty(id) && anyDuplicated(data[id]) > 0L) {
+    cli::cli_warn(c(
+      "Duplicate rows found in data for the {.val {id}} column{?s}.",
+      "i" = "Percentages/Denominators are not correct."
+    ))
+  }
 
   # return empty tibble if no variables selected -------------------------------
   if (is_empty(variables)) {
@@ -99,15 +130,17 @@ ard_hierarchical <- function(data,
 
 #' @rdname ard_hierarchical
 #' @export
-ard_hierarchical_count <- function(data,
-                                   variables,
-                                   by = dplyr::group_vars(data),
-                                   fmt_fn = NULL,
-                                   stat_label = everything() ~ default_stat_labels()) {
+ard_hierarchical_count.data.frame <- function(data,
+                                              variables,
+                                              by = dplyr::group_vars(data),
+                                              fmt_fn = NULL,
+                                              stat_label = everything() ~ default_stat_labels(),
+                                              ...) {
+  set_cli_abort_call()
+  check_dots_used()
+
   # check inputs ---------------------------------------------------------------
-  check_not_missing(data)
   check_not_missing(variables)
-  check_data_frame(x = data)
 
   # process arguments ----------------------------------------------------------
   process_selectors(
@@ -134,7 +167,7 @@ ard_hierarchical_count <- function(data,
           variables = "...ard_dummy_for_counting...",
           by = all_of(by),
           strata = all_of(variables[seq_len(i)]),
-          statistic = everything() ~ categorical_summary_fns("n"),
+          statistic = everything() ~ "n",
           fmt_fn = fmt_fn,
           stat_label = stat_label
         ) |>
@@ -161,7 +194,6 @@ ard_hierarchical_count <- function(data,
 #' data <- data.frame(x = 1, y = 2, group1 = 3, group2 = 4)
 #'
 #' cards:::.rename_last_group_as_variable(data)
-#' @noRd
 .rename_last_group_as_variable <- function(df_result) {
   df_result <- dplyr::select(df_result, -all_ard_variables())
 

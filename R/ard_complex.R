@@ -12,7 +12,7 @@
 #'   - `x`: a vector
 #'   - `data`: the data frame that has been subset such that the `by`/`strata` columns
 #'       and rows in which `"variable"` is `NA` have been removed.
-#'   - `data_full`: the full data frame
+#'   - `full_data`: the full data frame
 #'   - `by`: character vector of the `by` variables
 #'   - `strata`: character vector of the `strata` variables
 #'   It is unlikely any one function will need _all_ of the above elements,
@@ -23,7 +23,7 @@
 #'   may look like: `foo(x, data, ...)`
 #'
 #' @return an ARD data frame of class 'card'
-#' @export
+#' @name ard_complex
 #'
 #' @examples
 #' # example how to mimic behavior of `ard_continuous()`
@@ -35,10 +35,10 @@
 #' )
 #'
 #' # return the grand mean and the mean within the `by` group
-#' grand_mean <- function(data, data_full, variable, ...) {
+#' grand_mean <- function(data, full_data, variable, ...) {
 #'   list(
 #'     mean = mean(data[[variable]], na.rm = TRUE),
-#'     grand_mean = mean(data_full[[variable]], na.rm = TRUE)
+#'     grand_mean = mean(full_data[[variable]], na.rm = TRUE)
 #'   )
 #' }
 #'
@@ -48,18 +48,31 @@
 #'     variables = "AGE",
 #'     statistic = list(AGE = list(means = grand_mean))
 #'   )
-ard_complex <- function(data,
-                        variables,
-                        by = dplyr::group_vars(data),
-                        strata = NULL,
-                        statistic,
-                        fmt_fn = NULL,
-                        stat_label = everything() ~ default_stat_labels()) {
-  # check inputs ---------------------------------------------------------------
+NULL
+
+#' @rdname ard_complex
+#' @export
+ard_complex <- function(data, ...) {
   check_not_missing(data)
+  UseMethod("ard_complex")
+}
+
+#' @rdname ard_complex
+#' @export
+ard_complex.data.frame <- function(data,
+                                   variables,
+                                   by = dplyr::group_vars(data),
+                                   strata = NULL,
+                                   statistic,
+                                   fmt_fn = NULL,
+                                   stat_label = everything() ~ default_stat_labels(),
+                                   ...) {
+  set_cli_abort_call()
+  check_dots_used()
+
+  # check inputs ---------------------------------------------------------------
   check_not_missing(variables)
   check_not_missing(statistic)
-  check_data_frame(x = data)
 
   # process inputs -------------------------------------------------------------
   process_selectors(data, variables = {{ variables }})
@@ -68,7 +81,7 @@ ard_complex <- function(data,
   missing_statistics_vars <- setdiff(variables, names(statistic))
   if (!is_empty(missing_statistics_vars)) {
     "The following columns do not have {.arg statistic} defined: {.val {missing_statistics_vars}}." |>
-      cli::cli_abort()
+      cli::cli_abort(call = get_cli_abort_call())
   }
 
   # calculate statistics -------------------------------------------------------
@@ -82,7 +95,7 @@ ard_complex <- function(data,
     # putting the expr in quotes to avoid note about global variables
       "do.call(fun, args = list(x = stats::na.omit(nested_data[[variable]]),
                                 data = tidyr::drop_na(nested_data, any_of(variable)),
-                                data_full = data,
+                                full_data = data,
                                 variable = variable,
                                 by = by,
                                 strata = strata))" |>
