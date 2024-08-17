@@ -1,9 +1,9 @@
-0603a5cac7b951cee15148a5fbbd9192 *DESCRIPTION
+f4d8c6b1a208f67b537c3cd2df4bf717 *DESCRIPTION
 a2b446eb33eecb276d9fec0c42f00c12 *NAMESPACE
-40bb57e878c6395aeb2499837bce46ac *NEWS.md
+c7f5e1bf2c08670a2658b1ef95f14e7a *NEWS.md
 00cc70503ce6a24f81c079b633df85f1 *R/apply_fmt_fn.R
 9cd3873e36d3003fba7ee0673ae2b831 *R/ard_attributes.R
-79dae7c6a0765c69c082d21277de173e *R/ard_categorical.R
+91269cb54b1a911659fafe1471766fcc *R/ard_categorical.R
 9c539bc817ef00f633cbac5336b13264 *R/ard_complex.R
 ed666f35733116fc5863850cc650ff4a *R/ard_continuous.R
 69970896bd2607db167152120750b894 *R/ard_dichotomous.R
@@ -40,11 +40,11 @@ a02e0e11a24702e15b9585153ae47f3a *R/syntax.R
 f708c7953e0a14536d1df91957d6bb59 *R/tidy_ard_order.R
 91c1efd8037c3f529f0cf721a0fc7317 *R/tidy_as_ard.R
 674aaadb1f9236bb7b84609d0397b155 *R/utils.R
-098ddaf73e417459d6558f85c5f52942 *README.md
+dcf1f404a6805e17464bdfd5d31a7f9b *README.md
 9be3ed6d43911aad5ecc307394a2c179 *data/ADAE.rda
 e36aab825c5346c2bd8cddcc1acdef58 *data/ADSL.rda
 01d97bb63b26c9bc4adb45cb6c7d865e *data/ADTTE.rda
-ff9c6d3a0f7bed7ddc3292b374d97ddf *inst/WORDLIST
+ccf92a7de994963f853316a0fdb3106b *inst/WORDLIST
 12348841294bf8e247ade026da4cb77f *man/adam.Rd
 68186055b0e34070d14da1333671fc70 *man/alias_as_fmt_fn.Rd
 7381ea6f468868dc67b55da0cf439a4e *man/apply_fmt_fn.Rd
@@ -146,7 +146,7 @@ cc4eeeb97e662c42f56e05876ac1e54f *tests/testthat/_snaps/shuffle_ard.md
 ed6bc57f4319891ba53421c469d138e0 *tests/testthat/_snaps/tidy_as_ard.md
 a86d12b42b5bd7e2fa2681e9153a4efb *tests/testthat/test-apply_fmt_fn.R
 5803aae824eba7894af9e36b5eb8584f *tests/testthat/test-ard_attributes.R
-46fa30ecbe328a3352676cf7ea1111c6 *tests/testthat/test-ard_categorical.R
+87ce344ea9506a61ffbfdc0cb913a1e7 *tests/testthat/test-ard_categorical.R
 b259a02db75e5f1fb9d2740a48372bac *tests/testthat/test-ard_complex.R
 76e8febb34030e0d8fe14fba94220302 *tests/testthat/test-ard_continuous.R
 d4d4d1e9614568ecf37b76cf7586883e *tests/testthat/test-ard_dichotomous.R
