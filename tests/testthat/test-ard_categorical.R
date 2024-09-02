@@ -31,7 +31,7 @@ test_that("ard_categorical() univariate", {
       mtcars,
       variables = starts_with("xxxxx")
     ),
-    dplyr::tibble()
+    dplyr::tibble() |> as_card()
   )
 
   # works for ordered factors
@@ -837,6 +837,14 @@ test_that("ard_categorical(by) messages about protected names", {
   expect_error(
     ard_categorical(mtcars2, by = variable_level, variables = by),
     'The `by` argument cannot include variables named "variable" and "variable_level".'
+  )
+})
+
+
+test_that("ard_categorical() follows ard structure", {
+  expect_silent(
+    ard_categorical(mtcars, variables = "am") |>
+      check_ard_structure(method = FALSE)
   )
 })
 
