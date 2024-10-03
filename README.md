@@ -7,9 +7,10 @@
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/cards)](https://CRAN.R-project.org/package=cards)
-[![R-CMD-check](https://github.com/insightsengineering/cards/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/insightsengineering/cards/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/insightsengineering/cards/branch/main/graph/badge.svg)](https://app.codecov.io/gh/insightsengineering/cards?branch=main)
+[![Downloads](https://cranlogs.r-pkg.org/badges/cards)](https://cran.r-project.org/package=cards)
+[![R-CMD-check](https://github.com/insightsengineering/cards/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/insightsengineering/cards/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
@@ -95,3 +96,12 @@ ard_continuous(ADSL, by = "ARM", variables = "AGE")
 #> ℹ Use `print(n = ...)` to see more rows
 #> ℹ 4 more variables: context, fmt_fn, warning, error
 ```
+
+## Other Resources
+
+- [Posit 2024 pharmaverse
+  Workshop](https://posit-conf-2024.github.io/pharmaverse/#schedule):
+  Follow the link for “Analysis Results Datasets” in the schedule.
+
+- [2024 China Pharma R User Conference Keynote
+  Address](https://www.danieldsjoberg.com/china-pharma-keynote-2024/material.html)

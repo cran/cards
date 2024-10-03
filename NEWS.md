@@ -1,3 +1,29 @@
+# cards 0.3.0
+
+## New Features & Updates
+
+* Added functions `ard_stack_hierarchical()` and  `ard_stack_hierarchical_count()` that ease the creation of ARDs for multiple nested or hierarchical structures. (#314)
+
+* Added functions `update_ard_fmt_fn()` and `update_ard_stat_label()` to update an ARD's formatting function and statistic label, respectively. (#253)
+
+* Added `rename_ard_columns(unlist)` argument, which unlists specified columns in the ARD data frame. (#313)
+
+* Added `ard_strata()` function to ease the task of calculating ARDs stratified by one or more other categorical variables. (#273)
+
+* Added functions `mock_continuous()`, `mock_categorical()`, `mock_dichotomous()`, `mock_missing()`, `mock_attributes()` to build ARDs in the absence of a data frame. Where applicable, the formatting functions are set to return `'xx'` or `'xx.x'` to aid in the construction of mock tables or table shells. (#256)
+
+* Added functions for printing results from `eval_capture_conditions()`. Captured conditions can be printed as either errors or messages with `captured_condition_as_error()` and `captured_condition_as_message()`, respectively. (#282)
+
+## Other Updates
+
+* The `ard_hierarchical_count()` function has been updated to match the behavior of `ard_hierarchical()` and results are now only returned for the last column listed in the `variables` arguments, rather than recursively counting all variables.
+
+* Add columns `'fmt_fn'`, `'warning'`, and `'errors'` to `ard_attributes()` output. (#327)
+
+* Add checks for factors with no levels, or any levels that are `NA` into `ard_*` functions (#255) 
+
+* Any rows with `NA` or `NaN` values in the `.by` columns specified in `ard_stack()` are now removed from all calculations. (#320)
+
 # cards 0.2.2
 
 ## New Features & Updates
@@ -42,7 +68,7 @@
 
 * Added `check_ard_structure(column_order, method)` arguments to the function to check for column ordering and whether result contains a `stat_name='method'` row.
 
-* Added the optional `ard_heirarchicial(id)` argument. When provided we check for duplicates across the column(s) supplied here. If duplicates are found, the user is warned that the percentages and denominators are not correct. (#214)
+* Added the optional `ard_hierarchical(id)` argument. When provided we check for duplicates across the column(s) supplied here. If duplicates are found, the user is warned that the percentages and denominators are not correct. (#214)
 
 * Improved messaging in `check_pkg_installed()` that incorporates the calling function name in the case of an error. (#205)
 

@@ -41,6 +41,7 @@ ard_attributes.data.frame <- function(data,
                                       label = NULL,
                                       ...) {
   set_cli_abort_call()
+  check_dots_used()
 
   # check inputs ---------------------------------------------------------------
   check_not_missing(data)
@@ -55,6 +56,19 @@ ard_attributes.data.frame <- function(data,
   if (is_empty(variables)) {
     return(dplyr::tibble() |> as_card())
   }
+
+
+  # check label is a named list ------------------------------------------------
+  if (!is_empty(label)) {
+    if (!is.list(label) || !is_named(label) || some(label, \(x) !is_string(x))) {
+      cli::cli_abort(
+        "The {.arg label} argument must be a named list with each element a string.",
+        call = get_cli_abort_call()
+      )
+    }
+  }
+
+
 
   variables |>
     lapply(
@@ -79,7 +93,10 @@ ard_attributes.data.frame <- function(data,
         .data$stat_name %in% "class" ~ "Variable Class",
         TRUE ~ .data$stat_name
       ),
-      context = "attributes"
+      context = "attributes",
+      fmt_fn = ifelse(.data$stat_name %in% "label", list(as.character), list(NULL)),
+      warning = list(NULL),
+      error = list(NULL)
     ) |>
     cards::tidy_ard_column_order() |>
     as_card()

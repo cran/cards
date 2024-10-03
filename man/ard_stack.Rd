@@ -23,7 +23,8 @@ a data frame}
 Series of ARD function calls to be run and stacked}
 
 \item{.by}{(\code{\link[dplyr:dplyr_tidy_select]{tidy-select}})\cr
-columns to tabulate by in the series of ARD function calls}
+columns to tabulate by in the series of ARD function calls.
+Any rows with \code{NA} or \code{NaN} values are removed from all calculations.}
 
 \item{.overall}{(\code{logical})\cr logical indicating whether overall statistics
 should be calculated (i.e. re-run all \verb{ard_*()} calls with \code{by=NULL}).
@@ -45,7 +46,7 @@ logical indicating whether to perform \code{shuffle_ard()} on the final result.
 Default is \code{FALSE}.}
 }
 \value{
-a transformed ARD data frame (of class 'card' if \code{.shuffle = FALSE})
+an ARD data frame of class 'card'
 }
 \description{
 Stack multiple ARD calls sharing common input \code{data} and \code{by} variables.
