@@ -1,6 +1,11 @@
 #' Hierarchical ARD Statistics
 #'
-#' `r lifecycle::badge('experimental')`\cr
+#' @description
+#' _Functions `ard_hierarchical()` and `ard_hierarchical_count()` are primarily helper
+#' functions for [`ard_stack_hierarchical()`] and [`ard_stack_hierarchical_count()`],
+#' meaning that it will be rare a user needs to call
+#' `ard_hierarchical()`/`ard_hierarchical_count()` directly._
+#'
 #' Performs hierarchical or nested tabulations, e.g. tabulates AE terms
 #' nested within AE system organ class.
 #' - `ard_hierarchical()` includes summaries for the last variable listed
@@ -18,12 +23,19 @@
 #' @param id ([`tidy-select`][dplyr::dplyr_tidy_select])\cr
 #'   an optional argument used to assert there are no duplicates within
 #'   the `c(id, variables)` columns.
+#' @param denominator (`data.frame`, `integer`)\cr
+#'   used to define the denominator and enhance the output.
+#'   The argument is required for `ard_hierarchical()` and optional
+#'   for `ard_hierarchical_count()`.
+#'   - the univariate tabulations of the `by` variables are calculated with `denominator`,
+#'     when a data frame is passed, e.g. tabulation of the treatment assignment
+#'     counts that may appear in the header of a table.
+#'   - the `denominator` argument must be specified when `id` is used to
+#'     calculate the event rates.
 #' @inheritParams ard_categorical
 #'
 #' @return an ARD data frame of class 'card'
 #' @name ard_hierarchical
-#'
-#' @inheritSection ard_categorical Denominators
 #'
 #' @examples
 #' ard_hierarchical(
@@ -123,7 +135,7 @@ ard_hierarchical.data.frame <- function(data,
     )
 
   # renaming columns -----------------------------------------------------------
-  df_result <- .rename_last_group_as_variable(df_result)
+  df_result <- .rename_last_group_as_variable(df_result, by = by, variables = variables)
 
   # return ard -----------------------------------------------------------------
   df_result |>
@@ -165,7 +177,7 @@ ard_hierarchical_count.data.frame <- function(data,
     fmt_fn = fmt_fn,
     stat_label = stat_label
   ) |>
-    .rename_last_group_as_variable() |>
+    .rename_last_group_as_variable(by = by, variables = variables) |>
     dplyr::mutate(context = "hierarchical_count") |>
     as_card()
 }
@@ -184,15 +196,12 @@ ard_hierarchical_count.data.frame <- function(data,
 #' @examples
 #' data <- data.frame(x = 1, y = 2, group1 = 3, group2 = 4)
 #'
-#' cards:::.rename_last_group_as_variable(data)
-.rename_last_group_as_variable <- function(df_result) {
-  df_result <- dplyr::select(df_result, -all_ard_variables())
-
-  last_two_grouping_columns <-
-    dplyr::select(df_result, all_ard_groups()) |>
-    names() |>
-    utils::tail(n = 2L) |>
-    stats::setNames(c("variable", "variable_level"))
-
-  dplyr::rename(df_result, !!!last_two_grouping_columns)
+#' cards:::.rename_last_group_as_variable(data, by = "ARM", variables = "AESOC")
+.rename_last_group_as_variable <- function(df_result, by, variables) {
+  df_result |>
+    dplyr::select(-all_ard_variables()) |>
+    dplyr::rename(
+      variable = all_ard_group_n(n = length(c(by, variables)), types = "names"),
+      variable_level = all_ard_group_n(n = length(c(by, variables)), types = "levels")
+    )
 }

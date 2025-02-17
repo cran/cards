@@ -10,10 +10,10 @@ CMD
 Codecov
 GlaxoSmithKline
 Hoffmann
+IEC
 JSON
 Lifecycle
 ORCID
-Pharma
 Pre
 Rua
 SAS's
@@ -33,13 +33,13 @@ jsonlite
 mis
 nalysis
 namespaced
-pharmaverse
 pre
 quosures
 reproducibility
 reusability
 sd
 tibble
+tibbles
 tidyselect
 tidyselector
 tidyselectors
@@ -48,3 +48,4 @@ unlist
 unlists
 unnested
 unnests
+wilcox
