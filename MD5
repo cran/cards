@@ -1,8 +1,8 @@
-4d799eddc28982e583f738acac8052fd *DESCRIPTION
+900052b0bd8d1b5f9e644d8847bad5f5 *DESCRIPTION
 55f219eb7500841d065362d2a0e6a2ba *NAMESPACE
-5acbfce8bb393abfd3edb347c235075c *NEWS.md
+697283d59d31cc2c21aebc99a45a6faf *NEWS.md
 c2e9d74c15350256b711e9ab24cad727 *R/add_calculated_row.R
-be5d1812d2607590ebfaaaceb7d0d103 *R/apply_fmt_fn.R
+4cc4b46b0aa736d18d9b1aa7ad282865 *R/apply_fmt_fn.R
 94f7a27f686c47b17c737dce8f386ed2 *R/ard_attributes.R
 1483ea5d3a2bf69ea9eb3730e2d1000c *R/ard_categorical.R
 7059f4da6a945ad2753f38123e838c66 *R/ard_complex.R
@@ -177,7 +177,7 @@ ac93ecf4d859660d18e64a54eda58671 *tests/testthat/_snaps/shuffle_ard.md
 ed6bc57f4319891ba53421c469d138e0 *tests/testthat/_snaps/tidy_as_ard.md
 831ea982e65f6787768bfa6a03b99ba1 *tests/testthat/_snaps/update_ard.md
 697c196cd1fa648c38057758ffad18a2 *tests/testthat/test-add_calculated_row.R
-2d3a3d98afc26b77a1106506e3859d15 *tests/testthat/test-apply_fmt_fn.R
+5bfbc5fe273dabf0a8eed47b00afcdfd *tests/testthat/test-apply_fmt_fn.R
 9aedcdafa29999167bd41b6cd09c0a37 *tests/testthat/test-ard_attributes.R
 179f1c0cf06c3fd56bf4e29d9d8b2e6c *tests/testthat/test-ard_categorical.R
 11219aa332ed477095092a470e629f42 *tests/testthat/test-ard_complex.R

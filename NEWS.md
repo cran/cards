@@ -1,3 +1,7 @@
+# cards 0.5.1
+
+* Small update to account for a change in R-devel.
+
 # cards 0.5.0
 
 ## New Features and Functions
