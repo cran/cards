@@ -3,15 +3,15 @@
     Code
       ard_simple_shuffled
     Output
-        variable    context stat_name stat_label       stat fmt_fn warning error
-      1      AGE continuous         N          N 254.000000      0    NULL  NULL
-      2      AGE continuous      mean       Mean  75.086614      1    NULL  NULL
-      3      AGE continuous        sd         SD   8.246234      1    NULL  NULL
-      4      AGE continuous    median     Median  77.000000      1    NULL  NULL
-      5      AGE continuous       p25         Q1  70.000000      1    NULL  NULL
-      6      AGE continuous       p75         Q3  81.000000      1    NULL  NULL
-      7      AGE continuous       min        Min  51.000000      1    NULL  NULL
-      8      AGE continuous       max        Max  89.000000      1    NULL  NULL
+        variable    context stat_name stat_label       stat fmt_fun warning error
+      1      AGE continuous         N          N 254.000000       0    NULL  NULL
+      2      AGE continuous      mean       Mean  75.086614       1    NULL  NULL
+      3      AGE continuous        sd         SD   8.246234       1    NULL  NULL
+      4      AGE continuous    median     Median  77.000000       1    NULL  NULL
+      5      AGE continuous       p25         Q1  70.000000       1    NULL  NULL
+      6      AGE continuous       p75         Q3  81.000000       1    NULL  NULL
+      7      AGE continuous       min        Min  51.000000       1    NULL  NULL
+      8      AGE continuous       max        Max  89.000000       1    NULL  NULL
 
 ---
 
@@ -93,6 +93,33 @@
       2 Overall ARM        <NA>   AGEGR1          65-80 categorical         n          n  144
       3        <NA> Overall SEX      AGE           <NA>  continuous         N          N  254
       4        <NA>           F      AGE           <NA>  continuous         N          N  143
+
+---
+
+    Code
+      shuffle_ard(bind_ard(dplyr::slice(ard_categorical(ADSL, by = c(ARM, SEX), variables = AGEGR1), 1), dplyr::slice(ard_categorical(ADSL, by = SEX, variables = AGEGR1), 1), dplyr::slice(ard_categorical(
+        ADSL, variables = AGEGR1), 1)))
+    Output
+      # A tibble: 3 x 8
+        ARM         SEX         variable variable_level context     stat_name stat_label  stat
+        <chr>       <chr>       <chr>    <chr>          <chr>       <chr>     <chr>      <int>
+      1 Placebo     F           AGEGR1   65-80          categorical n         n             22
+      2 Overall ARM F           AGEGR1   65-80          categorical n         n             78
+      3 Overall ARM Overall SEX AGEGR1   65-80          categorical n         n            144
+
+---
+
+    Code
+      shuffle_ard(bind_ard(ard_continuous(adsl_new, variables = "AGE", statistic = ~ continuous_summary_fns("mean")), ard_continuous(adsl_new, by = "ARM", variables = "AGE", statistic = ~
+        continuous_summary_fns("mean"))))
+    Output
+      # A tibble: 4 x 6
+        ARM                  variable context    stat_name stat_label  stat
+        <chr>                <chr>    <chr>      <chr>     <chr>      <dbl>
+      1 Overall ARM.1        AGE      continuous mean      Mean        75.1
+      2 Overall ARM          AGE      continuous mean      Mean        75.2
+      3 Xanomeline High Dose AGE      continuous mean      Mean        74.4
+      4 Xanomeline Low Dose  AGE      continuous mean      Mean        75.7
 
 # shuffle_ard fills missing group levels if the group is meaningful for cardx output
 

@@ -111,6 +111,27 @@ test_that("shuffle_ard fills missing group levels if the group is meaningful", {
       shuffle_ard() |>
       as.data.frame()
   )
+
+  # mix of hierarchical group variables - fills overall only if variable has been calculated by group elsewhere
+  expect_snapshot(
+    bind_ard(
+      ard_categorical(ADSL, by = c(ARM, SEX), variables = AGEGR1) |> dplyr::slice(1),
+      ard_categorical(ADSL, by = SEX, variables = AGEGR1) |> dplyr::slice(1),
+      ard_categorical(ADSL, variables = AGEGR1) |> dplyr::slice(1)
+    ) |>
+      shuffle_ard()
+  )
+
+  # fills with a unique group value if one already exists in the df
+  adsl_new <- ADSL |>
+    dplyr::mutate(ARM = ifelse(ARM == "Placebo", "Overall ARM", ARM))
+  expect_snapshot(
+    bind_ard(
+      ard_continuous(adsl_new, variables = "AGE", statistic = ~ continuous_summary_fns("mean")),
+      ard_continuous(adsl_new, by = "ARM", variables = "AGE", statistic = ~ continuous_summary_fns("mean"))
+    ) |>
+      shuffle_ard()
+  )
 })
 
 test_that("shuffle_ard doesn't trim off NULL/NA values", {
@@ -173,7 +194,7 @@ test_that("shuffle_ard fills missing group levels if the group is meaningful for
         statistic = c(`X-squared` = 5.07944166638125),
         p.value = 0.0788884197453486, statistic = c(`X-squared` = 1.03944199945198),
         p.value = 0.594686442507218
-      ), fmt_fn = list(
+      ), fmt_fun = list(
         statistic = 1L,
         p.value = 1L, statistic = 1L, p.value = 1L
       ), warning = list(
