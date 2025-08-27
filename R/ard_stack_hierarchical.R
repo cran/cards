@@ -97,9 +97,12 @@
 #'   variables represented in the ARD. Default is `FALSE`.
 #' @param total_n (scalar `logical`)\cr
 #'   logical indicating whether to include of `ard_total_n(denominator)` in the returned ARD.
-#' @param shuffle (scalar `logical`)\cr
-#'   logical indicating whether to perform `shuffle_ard()` on the final result.
-#'   Default is `FALSE`.
+#' @param shuffle `r lifecycle::badge("deprecated")` support for `.shuffle = TRUE`
+#'   will be removed in the next release. `ard_stack_hierarchical()` and
+#'   `ard_stack_hierarchical_count()` will no longer shuffle. `shuffle_ard()`
+#'   should be called separately.
+#' @param by_stats (`logical`)\cr
+#'   logical indicating whether to include overall stats of the `by` variables in the returned ARD.
 #'
 #' @return an ARD data frame of class 'card'
 #' @name ard_stack_hierarchical
@@ -135,7 +138,8 @@ ard_stack_hierarchical <- function(
     over_variables = FALSE,
     attributes = FALSE,
     total_n = FALSE,
-    shuffle = FALSE) {
+    shuffle = FALSE,
+    by_stats = TRUE) {
   set_cli_abort_call()
 
   # check inputs ---------------------------------------------------------------
@@ -173,7 +177,8 @@ ard_stack_hierarchical <- function(
     over_variables = over_variables,
     attributes = attributes,
     total_n = total_n,
-    shuffle = shuffle
+    shuffle = shuffle,
+    by_stats = by_stats
   )
 }
 
@@ -189,7 +194,8 @@ ard_stack_hierarchical_count <- function(
     over_variables = FALSE,
     attributes = FALSE,
     total_n = FALSE,
-    shuffle = FALSE) {
+    shuffle = FALSE,
+    by_stats = TRUE) {
   set_cli_abort_call()
 
   # check inputs ---------------------------------------------------------------
@@ -219,7 +225,8 @@ ard_stack_hierarchical_count <- function(
     over_variables = over_variables,
     attributes = attributes,
     total_n = total_n,
-    shuffle = shuffle
+    shuffle = shuffle,
+    by_stats = by_stats
   )
 }
 
@@ -236,7 +243,7 @@ internal_stack_hierarchical <- function(
     attributes = FALSE,
     total_n = FALSE,
     shuffle = FALSE,
-    include_uni_by_tab = TRUE) {
+    by_stats = TRUE) {
   # process inputs -------------------------------------------------------------
   check_not_missing(data)
   check_not_missing(variables)
@@ -252,6 +259,7 @@ internal_stack_hierarchical <- function(
   check_scalar_logical(attributes)
   check_scalar_logical(total_n)
   check_scalar_logical(shuffle)
+  check_scalar_logical(by_stats)
 
   # check inputs ---------------------------------------------------------------
   # both variables and include must be specified
@@ -407,14 +415,14 @@ internal_stack_hierarchical <- function(
 
   # add univariate tabulations of by variables ---------------------------------
   if (
-    isTRUE(include_uni_by_tab) &&
+    isTRUE(by_stats) &&
       is.data.frame(denominator) &&
       !is_empty(intersect(by, names(denominator)))
   ) {
     lst_results <-
       lst_results |>
       append(
-        ard_categorical(
+        ard_tabulate(
           data = denominator,
           variables = all_of(intersect(by, names(denominator)))
         ) |>
@@ -444,7 +452,7 @@ internal_stack_hierarchical <- function(
           attributes = FALSE,
           total_n = FALSE,
           shuffle = FALSE,
-          include_uni_by_tab = FALSE
+          by_stats = FALSE
         ) %>%
           {
             suppressMessages(eval_tidy(.))
@@ -484,11 +492,6 @@ internal_stack_hierarchical <- function(
     cards::tidy_ard_column_order() |>
     cards::tidy_ard_row_order()
 
-  # shuffle if requested -------------------------------------------------------
-  if (isTRUE(shuffle)) {
-    result <- shuffle_ard(result)
-  }
-
   # append attributes used for sorting/filtering -------------------------------
   attr(result, "args") <- list(
     by = by,
@@ -498,6 +501,16 @@ internal_stack_hierarchical <- function(
 
   # sort ARD alphanumerically --------------------------------------------------
   result <- result |> sort_ard_hierarchical(sort = "alphanumeric")
+
+  # shuffle if requested -------------------------------------------------------
+  if (isTRUE(shuffle)) {
+    lifecycle::deprecate_warn(
+      when = "0.7.0",
+      what = "cards::ard_stack_hierarchical(shuffle)",
+      details = "Call `shuffle_ard()` after `ard_stack_hierarchical()`."
+    )
+    result <- shuffle_ard(result)
+  }
 
   # return final result --------------------------------------------------------
   result |> as_card()

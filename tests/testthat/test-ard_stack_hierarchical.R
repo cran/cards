@@ -340,6 +340,28 @@ test_that("ard_stack_hierarchical(statistic)", {
   )
 })
 
+test_that("ard_stack_hierarchical with shuffle", {
+  # we expect it to work but with a warning messaged related to the deprecation
+  # of the `shuffle` argument
+  expect_no_error(
+    expect_warning(
+      ard_shuffled <- ard_stack_hierarchical(
+        ADAE_small,
+        variables = c(AESOC, AEDECOD),
+        id = USUBJID,
+        denominator = ADSL,
+        shuffle = TRUE
+      ),
+      "The `shuffle` argument of `ard_stack_hierarchical()` is deprecated as of cards 0.7.0.",
+      fixed = TRUE
+    )
+  )
+
+  expect_true(
+    "AESOC" %in% names(ard_shuffled)
+  )
+})
+
 # ard_stack_hierarchical_count() -----------------------------------------------
 test_that("ard_stack_hierarchical_count(variables)", {
   # ensure that all nested variables appear in resulting ARD
@@ -466,7 +488,7 @@ test_that("ard_stack_hierarchical_count(denominator) univariate tabulations", {
       ) |>
       dplyr::filter(variable == "TRTA") |>
       dplyr::select(-all_missing_columns()),
-    ard_categorical(ADSL, variables = TRTA) |>
+    ard_tabulate(ADSL, variables = TRTA) |>
       dplyr::select(-all_missing_columns()),
     ignore_attr = TRUE
   )
@@ -481,7 +503,7 @@ test_that("ard_stack_hierarchical_count(denominator) univariate tabulations", {
       ) |>
       dplyr::filter(variable == "TRTA") |>
       dplyr::select(-all_missing_columns()),
-    ard_categorical(ADSL, variables = TRTA) |>
+    ard_tabulate(ADSL, variables = TRTA) |>
       dplyr::select(-all_missing_columns()),
     ignore_attr = TRUE
   )
@@ -648,7 +670,6 @@ test_that("ard_stack_hierarchical_count(overall,over_variables)", {
   })
 })
 
-
 test_that("ard_stack_hierarchical_count(attributes)", {
   # requesting overall without a data frame denominator
   expect_equal(
@@ -663,8 +684,49 @@ test_that("ard_stack_hierarchical_count(attributes)", {
       dplyr::select(-all_missing_columns()),
     ADAE_small |>
       ard_attributes(variables = c(TRTA, AESOC, AEDECOD)) |>
-      dplyr::select(-all_missing_columns()) |>
-      dplyr::slice(c(5:6, 1:2, 3:4)),
+      dplyr::select(-all_missing_columns()),
     ignore_attr = TRUE
+  )
+})
+
+test_that("ard_stack_hierarchical() by_stats argument", {
+  # include by_stats
+  expect_silent(
+    ard <-
+      ard_stack_hierarchical(
+        ADAE_small,
+        variables = c(AESOC, AEDECOD),
+        by = TRTA,
+        id = USUBJID,
+        denominator = ADSL,
+        by_stats = TRUE
+      )
+  )
+
+  expect_equal(
+    ard |> dplyr::filter(variable == "TRTA") |> dplyr::select(-all_ard_groups()),
+    ard_tabulate(
+      data = ADSL,
+      variables = TRTA
+    ),
+    ignore_attr = TRUE
+  )
+
+  # no by_stats
+  expect_silent(
+    ard <-
+      ard_stack_hierarchical(
+        ADAE_small,
+        variables = c(AESOC, AEDECOD),
+        by = TRTA,
+        id = USUBJID,
+        denominator = ADSL,
+        by_stats = FALSE
+      )
+  )
+
+  expect_equal(
+    ard |> dplyr::filter(variable == "TRTA") |> nrow(),
+    0
   )
 })
