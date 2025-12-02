@@ -155,6 +155,17 @@ test_that("ard_stack_hierarchical(by)", {
       sort_ard_hierarchical("alphanumeric"),
     ignore_attr = TRUE
   )
+
+  # ARD with >2 `by` variables works
+  expect_silent(expect_message(
+    ard_stack_hierarchical(
+      cards::ADAE,
+      variables = c(AESOC, AEDECOD),
+      by = c(TRTA, TRTEMFL, AESEV),
+      id = USUBJID,
+      denominator = ADSL
+    )
+  ))
 })
 
 test_that("ard_stack_hierarchical(by) messaging", {
@@ -208,6 +219,33 @@ test_that("ard_stack_hierarchical(denominator) messaging", {
       by = TRTA,
       id = USUBJID
     )
+  )
+
+  # check denominator only keeps "by" and "id" variables
+  adsl_updated <-
+    cards::ADSL |>
+    dplyr::mutate(
+      REGION = "Asia",
+      COUNTRY = sample(c("CHN", "JPN", "PAK"), size = dplyr::n(), replace = TRUE)
+    )
+
+  expect_equal(
+    cards::ard_stack_hierarchical(
+      adsl_updated,
+      by = "ARM",
+      variable = c("REGION", "COUNTRY"),
+      id = "USUBJID",
+      denominator = adsl_updated
+    ),
+    cards::ard_stack_hierarchical(
+      adsl_updated,
+      by = "ARM",
+      variable = c("REGION", "COUNTRY"),
+      id = "USUBJID",
+      denominator = adsl_updated[c("USUBJID", "ARM")]
+    ),
+    ignore_attr = TRUE,
+    ignore_function_env = TRUE
   )
 })
 
@@ -343,22 +381,14 @@ test_that("ard_stack_hierarchical(statistic)", {
 test_that("ard_stack_hierarchical with shuffle", {
   # we expect it to work but with a warning messaged related to the deprecation
   # of the `shuffle` argument
-  expect_no_error(
-    expect_warning(
-      ard_shuffled <- ard_stack_hierarchical(
-        ADAE_small,
-        variables = c(AESOC, AEDECOD),
-        id = USUBJID,
-        denominator = ADSL,
-        shuffle = TRUE
-      ),
-      "The `shuffle` argument of `ard_stack_hierarchical()` is deprecated as of cards 0.7.0.",
-      fixed = TRUE
+  expect_error(
+    ard_shuffled <- ard_stack_hierarchical(
+      ADAE_small,
+      variables = c(AESOC, AEDECOD),
+      id = USUBJID,
+      denominator = ADSL,
+      shuffle = TRUE
     )
-  )
-
-  expect_true(
-    "AESOC" %in% names(ard_shuffled)
   )
 })
 
