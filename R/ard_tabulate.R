@@ -105,7 +105,7 @@ ard_tabulate.data.frame <- function(data,
 
   # deprecated args ------------------------------------------------------------
   if (lifecycle::is_present(fmt_fn)) {
-    lifecycle::deprecate_soft(
+    lifecycle::deprecate_warn(
       when = "0.6.1",
       what = "ard_tabulate(fmt_fn)",
       with = "ard_tabulate(fmt_fun)"
@@ -145,7 +145,7 @@ ard_tabulate.data.frame <- function(data,
 
   # return empty ARD if no variables selected ----------------------------------
   if (is_empty(variables)) {
-    return(dplyr::tibble() |> as_card())
+    return(dplyr::tibble() |> as_card(check = FALSE))
   }
 
   # return note about column names that result in errors -----------------------
@@ -160,6 +160,20 @@ ard_tabulate.data.frame <- function(data,
   # check factor levels --------------------------------------------------------
   check_no_na_factor_levels(data[c(variables, by, strata)])
   check_factor_has_levels(data[c(variables, by, strata)])
+
+  # check for column class mis-matches -----------------------------------------
+  if (is.data.frame(denominator)) {
+    denom_names <- names(denominator)
+    for (v in c(by, strata)) {
+      if (v %in% denom_names && !identical(class(data[[v]]), class(denominator[[v]]))) {
+        cli::cli_inform(
+          "The classes for column {.val {v}} in {.arg data} ({.cls {class(data[[v]])}})
+          and {.arg denominator} ({.cls {class(denominator[[v]])}}) do not match,
+          which {.emph may} cause downstream issues."
+        )
+      }
+    }
+  }
 
   # calculating summary stats --------------------------------------------------
   # calculate tabulation statistics
@@ -200,11 +214,20 @@ ard_tabulate.data.frame <- function(data,
     )
 
   # merge in stat labels and format ARD for return -----------------------------
-  df_result_final |>
+  ard_final <- df_result_final |>
     dplyr::mutate(context = "tabulate") |>
     tidy_ard_column_order() |>
     tidy_ard_row_order() |>
-    as_card()
+    as_card(check = FALSE)
+
+  # append attributes ----------------------------------------------------------
+  attr(ard_final, "args") <- list(
+    variables = variables,
+    by = by,
+    strata = strata
+  )
+
+  ard_final
 }
 
 
@@ -420,11 +443,22 @@ ard_tabulate.data.frame <- function(data,
   useNA <- match.arg(useNA)
   # tabulate results and save in data frame
   ...ard_tab_vars... <- c(by, strata, variable)
-  df_table <-
+  ...ard_tab... <-
     data[...ard_tab_vars...] |>
     dplyr::mutate(across(where(is.logical), ~ factor(., levels = c("FALSE", "TRUE")))) |>
-    with(inject(table(!!!syms(...ard_tab_vars...), useNA = !!useNA))) |>
-    dplyr::as_tibble(n = count_column)
+    with(inject(table(!!!syms(...ard_tab_vars...), useNA = !!useNA)))
+
+  # replace NA dimnames with placeholder to avoid R-devel error in as.data.frame()
+  ...ard_na_placeholder... <- "___cards_table_NA_PLACEHOLDER___"
+  dimnames(...ard_tab...) <- lapply(dimnames(...ard_tab...), function(x) {
+    x[is.na(x)] <- ...ard_na_placeholder...
+    x
+  })
+
+  df_table <-
+    ...ard_tab... |>
+    dplyr::as_tibble(n = count_column) |>
+    dplyr::mutate(across(all_of(...ard_tab_vars...), ~ dplyr::na_if(., ...ard_na_placeholder...)))
 
   # construct a matching data frame with the variables in their original type/class
   df_original_types <-

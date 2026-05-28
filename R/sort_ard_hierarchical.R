@@ -62,13 +62,13 @@ sort_ard_hierarchical <- function(x, sort = everything() ~ "descending") {
   check_not_missing(x)
   check_not_missing(sort)
   check_class(x, "card")
-  if (!"args" %in% names(attributes(x))) {
-    cli::cli_abort(
-      paste(
-        "Sorting is only available for stacked hierarchical ARDs created using",
-        "{.fun ard_stack_hierarchical} or {.fun ard_stack_hierarchical_count}."
-      ),
-      call = get_cli_abort_call()
+
+  if (!any(c("ard_stack_hierarchical", "ard_stack_hierarchical_count") %in% class(x))) {
+    cli::cli_warn(
+      c("The {.fun sort_ard_hierarchical} function was created for stacked hierarchical ARDs created using
+         {.fun ard_stack_hierarchical} or {.fun ard_stack_hierarchical_count}.",
+        "i" = "Unexpected results may occur."
+      )
     )
   }
 
@@ -281,7 +281,7 @@ sort_ard_hierarchical <- function(x, sort = everything() ~ "descending") {
       .data$stat_name == sort_stat, # select statistic to sum
       if (!is_empty(ard_args$by)) .data$group1 %in% ard_args$by else TRUE,
       if (length(c(ard_args$by, ard_args$variables)) > 1) {
-        if (ard_args$variable[i] %in% ard_args$include & !cur_var %in% "variable") {
+        if (ard_args$variables[i] %in% ard_args$include & !cur_var %in% "variable") {
           # if current variable is in include, sum *only* summary rows for the current variable
           .data$variable %in% "..overall.." &
             if (!next_var %in% "variable") .data[[next_var]] %in% "..empty.." else TRUE
