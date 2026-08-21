@@ -24,11 +24,14 @@ Unlist
 Xanomeline
 args
 ata
+behaviour
 cardx
 cli
+colour
 de
 dplyr
 env
+errored
 esult
 ets
 funder
@@ -38,6 +41,7 @@ jsonlite
 mis
 nalysis
 namespaced
+natively
 pre
 quosures
 reusability

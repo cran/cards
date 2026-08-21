@@ -310,10 +310,10 @@ internal_stack_hierarchical <- function(
   }
 
   # drop missing values --------------------------------------------------------
-  df_na_nan <- is.na(data[c(by, variables)]) |
-    apply(data[c(by, variables)], MARGIN = 2, is.nan)
+  # is.na() is TRUE for NaN, so a separate is.nan() scan is unnecessary
+  df_na_nan <- is.na(data[c(by, variables)])
   if (any(df_na_nan)) {
-    rows_with_na <- apply(df_na_nan, MARGIN = 1, any)
+    rows_with_na <- rowSums(df_na_nan) > 0L
     cli::cli_inform(c(
       "*" = "Removing {.val {sum(rows_with_na)}} row{?s} from {.arg data} with
                             {.val {NA}} or {.val {NaN}} values in {.val {c(by, variables)}} column{?s}."
@@ -326,10 +326,9 @@ internal_stack_hierarchical <- function(
     is.data.frame(denominator) && !is_empty(intersect(by, names(denominator)))
   ) {
     df_na_nan_denom <-
-      is.na(denominator[intersect(by, names(denominator))]) |
-        apply(denominator[intersect(by, names(denominator))], MARGIN = 2, is.nan)
+      is.na(denominator[intersect(by, names(denominator))])
     if (any(df_na_nan_denom)) {
-      rows_with_na_denom <- apply(df_na_nan_denom, MARGIN = 1, any)
+      rows_with_na_denom <- rowSums(df_na_nan_denom) > 0L
       cli::cli_inform(c(
         "*" = "Removing {.val {sum(rows_with_na_denom)}} row{?s} from {.arg denominator} with
                             {.val {NA}} or {.val {NaN}} values in {.val {intersect(by, names(denominator))}} column{?s}."
@@ -359,6 +358,24 @@ internal_stack_hierarchical <- function(
           "Denominator set by {.val {denom_cols}} column{?s} in {.arg denominator} data frame."
         )
       cli::cli_inform(c("i" = msg))
+    }
+    # message only if rows are actually dropped because `by` includes a column
+    # not in `denominator` (i.e. a subject has multiple values of that column
+    # within an `id`/`variables` group, so only the last is kept, see #525)
+    by_not_in_denom <- setdiff(by, denom_cols)
+    if (!is_empty(by_not_in_denom)) {
+      keep_last <-
+        !duplicated(vctrs::vec_group_id(data[c(id, denom_cols, variables)]), fromLast = TRUE)
+      keep_last_full <-
+        !duplicated(vctrs::vec_group_id(data[c(id, by, variables)]), fromLast = TRUE)
+      n_dropped <- sum(keep_last_full) - sum(keep_last)
+      if (n_dropped > 0L) {
+        cli::cli_inform(c(
+          "i" = "Because {.val {by_not_in_denom}} in the {.arg by} argument {cli::qty(by_not_in_denom)}{?is/are} not present in the {.arg denominator}, rows of {.arg data} were removed while calculating rates.",
+          "*" = "Subjects with multiple {.val {by_not_in_denom}} values will only be counted once, in the last level after sorting.",
+          "*" = "See {.help [cards::ard_stack_hierarchical()](cards::ard_stack_hierarchical)} for details."
+        ))
+      }
     }
   }
 
@@ -538,12 +555,13 @@ internal_stack_hierarchical <- function(
       by = all_of(by)
     )
   } else {
+    # keep the last row per `c(id, by-in-denom, variables)` group, in data order
+    # (equivalent to dplyr::slice_tail(n = 1L, by = ...), but avoids the
+    # per-group R-level slicing that dominates the runtime on large data)
+    slice_keys <- c(id, intersect(by, names(denominator)), variables)
+    keep_last <- !duplicated(vctrs::vec_group_id(data[slice_keys]), fromLast = TRUE)
     ard_hierarchical(
-      data = data |>
-        dplyr::slice_tail(
-          n = 1L,
-          by = all_of(c(id, intersect(by, names(denominator)), variables))
-        ),
+      data = vctrs::vec_slice(data, keep_last),
       variables = all_of(variables),
       by = all_of(by),
       denominator = denominator,
